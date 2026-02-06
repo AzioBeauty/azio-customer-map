@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azio Beauty — Customer Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0B0E11;
+    --surface: #141820;
+    --surface2: #1C2230;
+    --border: #2A3040;
+    --text: #E8ECF2;
+    --text-dim: #8892A4;
+    --accent: #D4A574;
+    --accent-light: #E8C9A8;
+    --accent-glow: rgba(212,165,116,0.15);
+    --eng: #D4A574;
+    --sct: #7BA4D4;
+    --wls: #D47B7B;
+    --nir: #7BD4A5;
+    --ie: #D4C67B;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+    flex-shrink: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #B8845A);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--bg);
+  }
+
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .header-subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 32px;
+  }
+
+  .stat {
+    text-align: right;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 320px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 900;
+  }
+
+  .sidebar-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  /* View toggle */
+  .view-toggle {
+    display: flex;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .view-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .view-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .view-btn:hover:not(.active) {
+    color: var(--text);
+  }
+
+  /* Region breakdown */
+  .region-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .region-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .region-row:hover {
+    background: var(--surface2);
+  }
+
+  .region-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .region-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .region-count {
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+  }
+
+  .region-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .region-bar-bg {
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .region-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* Top cities scrollable list */
+  .city-list-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+  }
+
+  .city-list-wrap h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    margin-top: 16px;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    padding: 8px 0;
+    z-index: 1;
+  }
+
+  .city-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 13px;
+  }
+
+  .city-row:hover {
+    background: var(--surface2);
+  }
+
+  .city-rank {
+    width: 22px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .city-name {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .city-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  /* Map container */
+  .map-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+  }
+
+  /* Dark map tiles */
+  .leaflet-container { background: var(--bg) !important; }
+  .leaflet-control-zoom { border: 1px solid var(--border) !important; }
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover { background: var(--surface2) !important; }
+
+  /* Custom tooltip */
+  .city-tooltip {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    color: var(--text) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  }
+  .city-tooltip .leaflet-tooltip-arrow { display: none; }
+  .tt-city { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .tt-count { color: var(--accent); font-weight: 700; font-size: 18px; }
+  .tt-label { color: var(--text-dim); font-size: 11px; }
+
+  /* Legend overlay */
+  .map-legend {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    z-index: 800;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .legend-circle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Scrollbar */
+  .city-list-wrap::-webkit-scrollbar { width: 4px; }
+  .city-list-wrap::-webkit-scrollbar-track { background: transparent; }
+  .city-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* JL Toggle */
+  .jl-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+
+  .jl-toggle input { display: none; }
+
+  .jl-toggle-slider {
+    width: 36px;
+    height: 20px;
+    background: var(--bg);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .jl-toggle-slider::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.2s;
+  }
+
+  .jl-toggle input:checked + .jl-toggle-slider {
+    background: rgba(76, 175, 80, 0.3);
+  }
+
+  .jl-toggle input:checked + .jl-toggle-slider::after {
+    left: 18px;
+    background: #4CAF50;
+  }
+
+  .jl-toggle-label {
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .jl-count {
+    font-size: 11px;
+    background: var(--bg);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  /* JL marker */
+  .jl-marker {
+    width: 28px;
+    height: 28px;
+    background: #1B5E20;
+    border: 2px solid #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  .jl-marker::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #4CAF50;
+  }
+
+  .jl-tooltip {
+    background: #1B3A1B !important;
+    border: 1px solid #4CAF50 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    color: var(--text) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  }
+  .jl-tooltip .leaflet-tooltip-arrow { display: none; }
+  .tt-jl-name { font-weight: 600; font-size: 13px; color: #4CAF50; margin-bottom: 1px; }
+  .tt-jl-brand { font-size: 11px; color: var(--text-dim); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .header-stats { gap: 16px; }
+    .stat-value { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">A</div>
+    <div>
+      <div class="header-title">Azio Beauty Customer Location Map</div>
+      <div class="header-subtitle">Azio Beauty — 568,999 customers across 51 countries</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat">
+      <div class="stat-value">568,999</div>
+      <div class="stat-label">With Locations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">99.7%</div>
+      <div class="stat-label">UK & Ireland</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">16,814</div>
+      <div class="stat-label">Unique Cities</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>Retail Overlay</h3>
+      <label class="jl-toggle">
+        <input type="checkbox" id="jlToggle" checked>
+        <span class="jl-toggle-slider"></span>
+        <span class="jl-toggle-label">John Lewis Stores <span class="jl-count">35</span></span>
+      </label>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>UK Regions</h3>
+      <div class="region-list" id="regionList"></div>
+    </div>
+
+    <div class="sidebar-section" style="padding-bottom: 8px;">
+      <h3>International</h3>
+      <div class="region-list" id="intlList"></div>
+    </div>
+
+    <div class="city-list-wrap" id="cityListWrap">
+      <h3>Top Cities</h3>
+      <div id="cityList"></div>
+    </div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-legend" id="mapLegend">
+      <div class="legend-title">Density</div>
+      <div class="legend-row"><div class="legend-circle" style="background: #D4A574; opacity: 0.4"></div> Low</div>
+      <div class="legend-row"><div class="legend-circle" style="background: #D4A574; opacity: 0.7"></div> Medium</div>
+      <div class="legend-row"><div class="legend-circle" style="background: #D4A574"></div> High</div>
+      <div style="border-top: 1px solid var(--border); margin: 6px 0;"></div>
+      <div class="legend-row"><div class="legend-circle" style="background: #1B5E20; border: 2px solid #4CAF50;"></div> John Lewis</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CITY COORDINATE LOOKUP (top 200 UK/IE cities)
+// ============================================================
+const COORDS = {
+  "London": [51.5074, -0.1278], "Glasgow": [55.8642, -4.2518], "Belfast": [54.5973, -5.9301],
+  "Liverpool": [53.4084, -2.9916], "Manchester": [53.4808, -2.2426], "Bristol": [51.4545, -2.5879],
+  "Birmingham": [52.4862, -1.8904], "Nottingham": [52.9548, -1.1581], "Leeds": [53.8008, -1.5491],
+  "Sheffield": [53.3811, -1.4701], "Edinburgh": [55.9533, -3.1883], "Leicester": [52.6369, -1.1398],
+  "Ballymena": [54.8637, -6.2764], "Londonderry": [55.0068, -7.3186], "Newry": [54.1751, -6.3402],
+  "Southampton": [50.9097, -1.4044], "Cardiff": [51.4816, -3.1791], "Plymouth": [50.3755, -4.1427],
+  "Derby": [52.9226, -1.4747], "Aberdeen": [57.1497, -2.0943], "Swansea": [51.6214, -3.9436],
+  "Hull": [53.7676, -0.3274], "Doncaster": [53.5228, -1.1285], "Bradford": [53.7960, -1.7594],
+  "Norwich": [52.6309, 1.2974], "Warrington": [53.3900, -2.5970], "Preston": [53.7632, -2.7031],
+  "York": [53.9591, -1.0815], "Coventry": [52.4068, -1.5197], "Wigan": [53.5450, -2.6325],
+  "Northampton": [52.2405, -0.9027], "Dundee": [56.4620, -2.9707], "Barnsley": [53.5529, -1.4791],
+  "Sunderland": [54.9069, -1.3838], "Middlesbrough": [54.5742, -1.2350], "Bolton": [53.5785, -2.4299],
+  "Rotherham": [53.4326, -1.3635], "Swindon": [51.5558, -1.7797], "Newcastle upon Tyne": [54.9783, -1.6178],
+  "Stockport": [53.4106, -2.1575], "Peterborough": [52.5695, -0.2405], "Colchester": [51.8959, 0.8919],
+  "Reading": [51.4543, -0.9781], "Newport": [51.5842, -2.9977], "Stoke-on-Trent": [53.0027, -2.1794],
+  "Lincoln": [53.2307, -0.5406], "Wolverhampton": [52.5870, -2.1288], "Wakefield": [53.6833, -1.4977],
+  "Portsmouth": [50.8198, -1.0880], "Milton Keynes": [52.0406, -0.7594], "Blackpool": [53.8142, -3.0503],
+  "Cambridge": [52.2053, 0.1218], "Poole": [50.7150, -1.9873], "Chester": [53.1895, -2.8909],
+  "Cheltenham": [51.8993, -2.0783], "Exeter": [50.7236, -3.5275], "Telford": [52.6779, -2.4453],
+  "Grimsby": [53.5675, -0.0808], "Darlington": [54.5235, -1.5527], "Hartlepool": [54.6863, -1.2103],
+  "Luton": [51.8787, -0.4200], "Carlisle": [54.8952, -2.9382], "Worcester": [52.1920, -2.2216],
+  "Solihull": [52.4121, -1.7783], "Shrewsbury": [52.7077, -2.7536], "Inverness": [57.4778, -4.2247],
+  "Basingstoke": [51.2665, -1.0925], "Harrogate": [53.9921, -1.5418], "Halifax": [53.7248, -1.8626],
+  "Gateshead": [54.9527, -1.6038], "Southport": [53.6456, -3.0043], "Worthing": [50.8148, -0.3718],
+  "Mansfield": [53.1464, -1.1982], "Romford": [51.5753, 0.1836], "Blackburn": [53.7500, -2.4850],
+  "Chorley": [53.6532, -2.6319], "Tamworth": [52.6337, -1.6911], "Scunthorpe": [53.5809, -0.6502],
+  "Crawley": [51.1092, -0.1872], "Sutton Coldfield": [52.5633, -1.8227], "Hereford": [52.0565, -2.7160],
+  "Kettering": [52.3983, -0.7227], "Perth": [56.3950, -3.4308], "Dudley": [52.5087, -2.0896],
+  "Nuneaton": [52.5228, -1.4677], "Basildon": [51.5761, 0.4886], "Watford": [51.6565, -0.3903],
+  "Stevenage": [51.9020, -0.2020], "Kilmarnock": [55.6114, -4.4949], "Slough": [51.5105, -0.5950],
+  "Oxford": [51.7520, -1.2577], "Stockton-on-Tees": [54.5665, -1.3131], "Bath": [51.3811, -2.3590],
+  "Redditch": [52.3065, -1.9452], "Ayr": [55.4582, -4.6299], "Croydon": [51.3762, -0.0982],
+  "Tunbridge Wells": [51.1322, 0.2634], "Rochester": [51.3882, 0.5026], "Chelmsford": [51.7356, 0.4685],
+  "Brighton": [50.8225, -0.1372], "Huddersfield": [53.6458, -1.7850], "Maidstone": [51.2724, 0.5229],
+  "Bedford": [52.1350, -0.4667], "Ipswich": [52.0567, 1.1482], "Bournemouth": [50.7192, -1.8808],
+  "Wrexham": [53.0462, -2.9927], "Oldham": [53.5409, -2.1114], "Falkirk": [56.0019, -3.7839],
+  "Gloucester": [51.8642, -2.2382], "Chesterfield": [53.2350, -1.4210],
+  "Walsall": [52.5859, -1.9822], "Paisley": [55.8466, -4.4239], "Bury": [53.5933, -2.2977],
+  "Eastbourne": [50.7686, 0.2905], "Bridgend": [51.5043, -3.5764], "Llanelli": [51.6837, -4.1626],
+  "Neath": [51.6603, -3.8039], "Caerphilly": [51.5710, -3.2180], "Stirling": [56.1166, -3.9369],
+  "Motherwell": [55.7905, -3.9912], "Aylesbury": [51.8147, -0.8128],
+  "Salisbury": [51.0688, -1.7946], "Hemel Hempstead": [51.7526, -0.4692],
+  "Bathgate": [55.9040, -3.6439], "Horsham": [51.0615, -0.3265], "Loughborough": [52.7707, -1.2031],
+  "Hove": [50.8310, -0.1709], "South Shields": [54.9937, -1.4305], "Taunton": [51.0190, -3.1001],
+  "Rugby": [52.3702, -1.2615], "Crewe": [53.0988, -2.4404], "Rochdale": [53.6097, -2.1561],
+  "Pontefract": [53.6912, -1.3121], "Dunfermline": [56.0719, -3.4393],
+  "Greater London": [51.5074, -0.1278], "Greater Manchester": [53.4808, -2.2426],
+  "West Midlands": [52.4862, -1.8904], "Essex": [51.7343, 0.4691], "Kent": [51.2787, 0.5217],
+  "Merseyside": [53.4084, -2.9916], "West Yorkshire": [53.7960, -1.7594],
+  "South Yorkshire": [53.3811, -1.4701], "Tyne and Wear": [54.9783, -1.6178],
+  "Surrey": [51.3148, -0.5600], "Hampshire": [51.0577, -1.3081], "Hertfordshire": [51.8098, -0.2377],
+  "Durham": [54.7761, -1.5733], "Lancashire": [53.8076, -2.5445], "Derbyshire": [53.1049, -1.5634],
+  "Staffordshire": [52.8053, -1.9749], "Cumbria": [54.5772, -2.7975], "Devon": [50.7156, -3.5309],
+  "Norfolk": [52.6140, 0.8864], "Suffolk": [52.1872, 0.9708], "Wiltshire": [51.3492, -1.9927],
+  "Leicestershire": [52.7722, -1.2072], "West Sussex": [50.8367, -0.7750],
+  "Worcestershire": [52.1919, -2.2216], "Aberdeenshire": [57.2868, -2.3815],
+  "North Lanarkshire": [55.8616, -3.9610], "South Lanarkshire": [55.6042, -3.7821],
+  "Fife": [56.2082, -3.1495], "Renfrewshire": [55.8312, -4.5394],
+  "Antrim and Newtownabbey": [54.6600, -5.9500], "Derry City and Strabane": [54.9966, -7.3086],
+  "Mid Ulster": [54.6417, -6.7528], "Newry Mourne and Down": [54.1751, -6.3402],
+  "Fermanagh and Omagh": [54.3481, -7.6324], "Causeway Coast and Glens": [55.1326, -6.5146],
+  "Armagh Banbridge and Craigavon": [54.3503, -6.6528], "Ards and North Down": [54.5867, -5.5979],
+  "Lisburn and Castlereagh": [54.5161, -6.0580], "Mid and East Antrim": [54.8606, -5.9417],
+  "Dungannon": [54.5083, -6.7689], "Craigavon": [54.4471, -6.3880], "Armagh": [54.3503, -6.6528],
+  "Magherafelt": [54.7533, -6.6081], "Omagh": [54.5974, -7.2997], "Coleraine": [55.1326, -6.6667],
+  "Ballymoney": [55.0707, -6.5117], "Cookstown": [54.6432, -6.7455], "Derry": [55.0068, -7.3186],
+  "Lisburn": [54.5161, -6.0580], "Newtownards": [54.5955, -5.6910], "Newtownabbey": [54.6600, -5.9500],
+  "Strabane": [54.8273, -7.4653], "Bangor": [54.6539, -5.6685], "Limavady": [55.0521, -6.9470],
+  "Carrickfergus": [54.7162, -5.8077], "Enniskillen": [54.3446, -7.6382],
+  "Downpatrick": [54.3285, -5.7136], "Larne": [54.8581, -5.8127],
+  "LONDON": [51.5074, -0.1278],
+  // Ireland
+  "Dublin": [53.3498, -6.2603], "Cork": [51.8985, -8.4756], "Galway": [53.2707, -9.0568],
+  "Limerick": [52.6638, -8.6267], "Waterford": [52.2593, -7.1101], "Drogheda": [53.7179, -6.3534],
+  "Kilkenny": [52.6541, -7.2448], "Ennis": [52.8431, -8.9862], "Tralee": [52.2704, -9.7026],
+  "Athlone": [53.4233, -7.9403], "Dundalk": [54.0029, -6.4020], "Sligo": [54.2697, -8.4694],
+  "Wexford": [52.3369, -6.4633], "Letterkenny": [54.9512, -7.7350], "Navan": [53.6527, -6.6816],
+  "Mullingar": [53.5260, -7.3380], "Naas": [53.2159, -6.6671], "Carlow": [52.8365, -6.9345],
+  "Tullamore": [53.2741, -7.4930], "Portlaoise": [53.0343, -7.5474],
+};
+
+// ============================================================
+// JOHN LEWIS STORES (36 current locations as of 2025)
+// ============================================================
+const JL_STORES = [
+  {name:"Oxford Street (Flagship)", lat:51.5152, lng:-0.1415},
+  {name:"Peter Jones, Chelsea", lat:51.4927, lng:-0.1571},
+  {name:"Stratford City", lat:51.5433, lng:-0.0066},
+  {name:"White City", lat:51.5074, lng:-0.2217},
+  {name:"Brent Cross", lat:51.5767, lng:-0.2219},
+  {name:"Canary Wharf", lat:51.5054, lng:-0.0197},
+  {name:"Kingston", lat:51.4123, lng:-0.3007},
+  {name:"Bluewater", lat:51.4410, lng:0.2619},
+  {name:"Chelmsford", lat:51.7356, lng:0.4685},
+  {name:"High Wycombe", lat:51.6293, lng:-0.7488},
+  {name:"Welwyn Garden City", lat:51.8010, lng:-0.2065},
+  {name:"Reading", lat:51.4543, lng:-0.9708},
+  {name:"Cambridge", lat:52.2053, lng:0.1218},
+  {name:"Ipswich", lat:52.0567, lng:1.1482},
+  {name:"Norwich", lat:52.6309, lng:1.2974},
+  {name:"Oxford", lat:51.7520, lng:-1.2577},
+  {name:"Cheltenham", lat:51.8993, lng:-2.0783},
+  {name:"Milton Keynes", lat:52.0406, lng:-0.7594},
+  {name:"Southampton", lat:50.9097, lng:-1.4044},
+  {name:"Chichester", lat:50.8365, lng:-0.7792},
+  {name:"Horsham", lat:51.0615, lng:-0.3265},
+  {name:"Poole", lat:50.7150, lng:-1.9873},
+  {name:"Exeter", lat:50.7236, lng:-3.5275},
+  {name:"Cribbs Causeway (Bristol)", lat:51.5268, lng:-2.5927},
+  {name:"Cardiff", lat:51.4816, lng:-3.1791},
+  {name:"Solihull", lat:52.4121, lng:-1.7783},
+  {name:"Leicester", lat:52.6369, lng:-1.1398},
+  {name:"Nottingham", lat:52.9548, lng:-1.1581},
+  {name:"Leeds", lat:53.7963, lng:-1.5470},
+  {name:"Liverpool", lat:53.4084, lng:-2.9916},
+  {name:"Trafford (Manchester)", lat:53.4653, lng:-2.3479},
+  {name:"Cheadle", lat:53.3941, lng:-2.1861},
+  {name:"Newcastle", lat:54.9744, lng:-1.6131},
+  {name:"Edinburgh", lat:55.9533, lng:-3.1883},
+  {name:"Glasgow", lat:55.8622, lng:-4.2518},
+];
+
+// ============================================================
+// DATA
+// ============================================================
+const CITIES = [
+  {city:"London",province:"ENG",country:"GB",count:21541},{city:"Glasgow",province:"SCT",country:"GB",count:16360},
+  {city:"Belfast",province:"NIR",country:"GB",count:7284},{city:"Liverpool",province:"ENG",country:"GB",count:8922},
+  {city:"Manchester",province:"ENG",country:"GB",count:8095},{city:"Greater London",province:"ENG",country:"GB",count:7121},
+  {city:"Bristol",province:"ENG",country:"GB",count:7081},{city:"Birmingham",province:"ENG",country:"GB",count:6926},
+  {city:"Nottingham",province:"ENG",country:"GB",count:5934},{city:"Leeds",province:"ENG",country:"GB",count:5866},
+  {city:"Sheffield",province:"ENG",country:"GB",count:5365},{city:"Edinburgh",province:"SCT",country:"GB",count:4570},
+  {city:"Leicester",province:"ENG",country:"GB",count:4037},{city:"Ballymena",province:"NIR",country:"GB",count:2381},
+  {city:"Londonderry",province:"NIR",country:"GB",count:2269},{city:"Newry",province:"NIR",country:"GB",count:2188},
+  {city:"Southampton",province:"ENG",country:"GB",count:3629},{city:"Cardiff",province:"WLS",country:"GB",count:5055},
+  {city:"Greater Manchester",province:"ENG",country:"GB",count:3556},{city:"West Midlands",province:"ENG",country:"GB",count:3552},
+  {city:"Antrim and Newtownabbey",province:"NIR",country:"GB",count:2100},{city:"Plymouth",province:"ENG",country:"GB",count:3483},
+  {city:"Derby",province:"ENG",country:"GB",count:3270},{city:"Aberdeen",province:"SCT",country:"GB",count:3315},
+  {city:"Swansea",province:"WLS",country:"GB",count:4586},{city:"Essex",province:"ENG",country:"GB",count:3255},
+  {city:"Derry City and Strabane",province:"NIR",country:"GB",count:1931},{city:"Hull",province:"ENG",country:"GB",count:3188},
+  {city:"Doncaster",province:"ENG",country:"GB",count:3165},{city:"Mid Ulster",province:"NIR",country:"GB",count:1890},
+  {city:"Bradford",province:"ENG",country:"GB",count:2970},{city:"Norwich",province:"ENG",country:"GB",count:2925},
+  {city:"Kent",province:"ENG",country:"GB",count:2877},{city:"West Yorkshire",province:"ENG",country:"GB",count:2797},
+  {city:"Dungannon",province:"NIR",country:"GB",count:1675},{city:"Warrington",province:"ENG",country:"GB",count:2773},
+  {city:"Preston",province:"ENG",country:"GB",count:2683},{city:"York",province:"ENG",country:"GB",count:2618},
+  {city:"Coventry",province:"ENG",country:"GB",count:2602},{city:"Wigan",province:"ENG",country:"GB",count:2597},
+  {city:"Merseyside",province:"ENG",country:"GB",count:2592},{city:"Northampton",province:"ENG",country:"GB",count:2578},
+  {city:"Dundee",province:"SCT",country:"GB",count:2584},{city:"Newry Mourne and Down",province:"NIR",country:"GB",count:1500},
+  {city:"Fermanagh and Omagh",province:"NIR",country:"GB",count:1483},{city:"Barnsley",province:"ENG",country:"GB",count:2392},
+  {city:"Sunderland",province:"ENG",country:"GB",count:2355},{city:"Middlesbrough",province:"ENG",country:"GB",count:2350},
+  {city:"Bolton",province:"ENG",country:"GB",count:2333},{city:"Rotherham",province:"ENG",country:"GB",count:2279},
+  {city:"Swindon",province:"ENG",country:"GB",count:2279},{city:"Causeway Coast and Glens",province:"NIR",country:"GB",count:1344},
+  {city:"Newcastle upon Tyne",province:"ENG",country:"GB",count:2238},{city:"Stockport",province:"ENG",country:"GB",count:2220},
+  {city:"Peterborough",province:"ENG",country:"GB",count:2178},{city:"Colchester",province:"ENG",country:"GB",count:2137},
+  {city:"Craigavon",province:"NIR",country:"GB",count:1266},{city:"Armagh",province:"NIR",country:"GB",count:1254},
+  {city:"Reading",province:"ENG",country:"GB",count:2084},{city:"Newport",province:"WLS",country:"GB",count:2936},
+  {city:"Stoke-on-Trent",province:"ENG",country:"GB",count:2060},{city:"North Lanarkshire",province:"SCT",country:"GB",count:2083},
+  {city:"Lincoln",province:"ENG",country:"GB",count:2032},{city:"Magherafelt",province:"NIR",country:"GB",count:1214},
+  {city:"Wolverhampton",province:"ENG",country:"GB",count:2019},{city:"Lancashire",province:"ENG",country:"GB",count:2001},
+  {city:"Wakefield",province:"ENG",country:"GB",count:1996},{city:"Portsmouth",province:"ENG",country:"GB",count:1982},
+  {city:"Milton Keynes",province:"ENG",country:"GB",count:1951},{city:"Omagh",province:"NIR",country:"GB",count:1154},
+  {city:"Armagh Banbridge and Craigavon",province:"NIR",country:"GB",count:1131},{city:"South Yorkshire",province:"ENG",country:"GB",count:1860},
+  {city:"Wirral",province:"ENG",country:"GB",count:1851},{city:"Chelmsford",province:"ENG",country:"GB",count:1832},
+  {city:"Bedford",province:"ENG",country:"GB",count:1810},{city:"Ipswich",province:"ENG",country:"GB",count:1792},
+  {city:"Bournemouth",province:"ENG",country:"GB",count:1760},{city:"Antrim",province:"NIR",country:"GB",count:1031},
+  {city:"Wrexham",province:"WLS",country:"GB",count:2410},{city:"Oldham",province:"ENG",country:"GB",count:1696},
+  {city:"South Lanarkshire",province:"SCT",country:"GB",count:1723},{city:"Newtownabbey",province:"NIR",country:"GB",count:1012},
+  {city:"Falkirk",province:"SCT",country:"GB",count:1718},{city:"Gloucester",province:"ENG",country:"GB",count:1673},
+  {city:"Chesterfield",province:"ENG",country:"GB",count:1673},{city:"Brighton",province:"ENG",country:"GB",count:1664},
+  {city:"Huddersfield",province:"ENG",country:"GB",count:1647},{city:"Walsall",province:"ENG",country:"GB",count:1637},
+  {city:"Mid and East Antrim",province:"NIR",country:"GB",count:982},{city:"Surrey",province:"ENG",country:"GB",count:1623},
+  {city:"Coleraine",province:"NIR",country:"GB",count:958},{city:"Hampshire",province:"ENG",country:"GB",count:1559},
+  {city:"Newtownards",province:"NIR",country:"GB",count:930},{city:"Hertfordshire",province:"ENG",country:"GB",count:1547},
+  {city:"Durham",province:"ENG",country:"GB",count:1542},{city:"Maidstone",province:"ENG",country:"GB",count:1537},
+  {city:"Blackpool",province:"ENG",country:"GB",count:1524},{city:"Cambridge",province:"ENG",country:"GB",count:1478},
+  {city:"Bridgend",province:"WLS",country:"GB",count:2069},{city:"Poole",province:"ENG",country:"GB",count:1464},
+  {city:"Tyne and Wear",province:"ENG",country:"GB",count:1459},{city:"Chester",province:"ENG",country:"GB",count:1428},
+  {city:"Fife",province:"SCT",country:"GB",count:1450},{city:"Enniskillen",province:"NIR",country:"GB",count:854},
+  {city:"Cheltenham",province:"ENG",country:"GB",count:1405},{city:"Exeter",province:"ENG",country:"GB",count:1405},
+  {city:"Telford",province:"ENG",country:"GB",count:1382},{city:"Grimsby",province:"ENG",country:"GB",count:1382},
+  {city:"Derry",province:"NIR",country:"GB",count:809},{city:"Lisburn",province:"NIR",country:"GB",count:807},
+  {city:"Dunfermline",province:"SCT",country:"GB",count:1367},{city:"Derbyshire",province:"ENG",country:"GB",count:1323},
+  {city:"Staffordshire",province:"ENG",country:"GB",count:1319},{city:"Lisburn and Castlereagh",province:"NIR",country:"GB",count:788},
+  {city:"Ballymoney",province:"NIR",country:"GB",count:785},{city:"Cookstown",province:"NIR",country:"GB",count:777},
+  {city:"Ards and North Down",province:"NIR",country:"GB",count:777},{city:"Darlington",province:"ENG",country:"GB",count:1292},
+  {city:"Hartlepool",province:"ENG",country:"GB",count:1288},{city:"Paisley",province:"SCT",country:"GB",count:1306},
+  {city:"Luton",province:"ENG",country:"GB",count:1283},{city:"Aberdeenshire",province:"SCT",country:"GB",count:1306},
+  {city:"Carlisle",province:"ENG",country:"GB",count:1250},{city:"Worcester",province:"ENG",country:"GB",count:1246},
+  {city:"Solihull",province:"ENG",country:"GB",count:1246},{city:"Shrewsbury",province:"ENG",country:"GB",count:1205},
+  {city:"Inverness",province:"SCT",country:"GB",count:1227},{city:"Ashford",province:"ENG",country:"GB",count:1200},
+  {city:"Strabane",province:"NIR",country:"GB",count:720},{city:"Stafford",province:"ENG",country:"GB",count:1164},
+  {city:"Bangor",province:"NIR",country:"GB",count:698},{city:"Basingstoke",province:"ENG",country:"GB",count:1146},
+  {city:"Harrogate",province:"ENG",country:"GB",count:1136},{city:"Halifax",province:"ENG",country:"GB",count:1119},
+  {city:"Pontefract",province:"ENG",country:"GB",count:1114},{city:"Gateshead",province:"ENG",country:"GB",count:1096},
+  {city:"Southport",province:"ENG",country:"GB",count:1086},{city:"Limavady",province:"NIR",country:"GB",count:648},
+  {city:"Worthing",province:"ENG",country:"GB",count:1081},{city:"Mansfield",province:"ENG",country:"GB",count:1074},
+  {city:"Romford",province:"ENG",country:"GB",count:1069},{city:"Blackburn",province:"ENG",country:"GB",count:1055},
+  {city:"Chorley",province:"ENG",country:"GB",count:1055},{city:"Tamworth",province:"ENG",country:"GB",count:1046},
+  {city:"Renfrewshire",province:"SCT",country:"GB",count:1056},{city:"Scunthorpe",province:"ENG",country:"GB",count:1028},
+  {city:"Stirling",province:"SCT",country:"GB",count:1043},{city:"Crawley",province:"ENG",country:"GB",count:1020},
+  {city:"Sutton Coldfield",province:"ENG",country:"GB",count:1005},{city:"Carrickfergus",province:"NIR",country:"GB",count:600},
+  {city:"Leicestershire",province:"ENG",country:"GB",count:995},{city:"Hereford",province:"ENG",country:"GB",count:991},
+  {city:"Worcestershire",province:"ENG",country:"GB",count:951},{city:"Kettering",province:"ENG",country:"GB",count:937},
+  {city:"Perth",province:"SCT",country:"GB",count:949},{city:"Dudley",province:"ENG",country:"GB",count:932},
+  {city:"Nuneaton",province:"ENG",country:"GB",count:927},{city:"Basildon",province:"ENG",country:"GB",count:922},
+  {city:"Watford",province:"ENG",country:"GB",count:922},{city:"Stevenage",province:"ENG",country:"GB",count:922},
+  {city:"Kilmarnock",province:"SCT",country:"GB",count:927},{city:"Slough",province:"ENG",country:"GB",count:905},
+  {city:"Oxford",province:"ENG",country:"GB",count:901},{city:"Stockton-on-Tees",province:"ENG",country:"GB",count:901},
+  {city:"Downpatrick",province:"NIR",country:"GB",count:537},{city:"Bath",province:"ENG",country:"GB",count:891},
+  {city:"Devon",province:"ENG",country:"GB",count:891},{city:"Harlow",province:"ENG",country:"GB",count:891},
+  {city:"Redditch",province:"ENG",country:"GB",count:886},{city:"Ayr",province:"SCT",country:"GB",count:902},
+  {city:"Larne",province:"NIR",country:"GB",count:526},{city:"West Sussex",province:"ENG",country:"GB",count:877},
+  {city:"Motherwell",province:"SCT",country:"GB",count:894},{city:"Bury",province:"ENG",country:"GB",count:877},
+  {city:"Norfolk",province:"ENG",country:"GB",count:877},{city:"Aylesbury",province:"ENG",country:"GB",count:877},
+  {city:"Eastbourne",province:"ENG",country:"GB",count:872},{city:"Caerphilly",province:"WLS",country:"GB",count:1229},
+  {city:"Llanelli",province:"WLS",country:"GB",count:1224},{city:"LONDON",province:"ENG",country:"GB",count:859},
+  {city:"Croydon",province:"ENG",country:"GB",count:855},{city:"Tunbridge Wells",province:"ENG",country:"GB",count:855},
+  {city:"Rochester",province:"ENG",country:"GB",count:851},{city:"Cumbria",province:"ENG",country:"GB",count:851},
+  {city:"Gillingham",province:"ENG",country:"GB",count:841},{city:"Crewe",province:"ENG",country:"GB",count:841},
+  {city:"Rugby",province:"ENG",country:"GB",count:841},{city:"Taunton",province:"ENG",country:"GB",count:841},
+  {city:"Rochdale",province:"ENG",country:"GB",count:828},{city:"Salisbury",province:"ENG",country:"GB",count:822},
+  {city:"Hemel Hempstead",province:"ENG",country:"GB",count:818},{city:"Neath",province:"WLS",country:"GB",count:1152},
+  {city:"Suffolk",province:"ENG",country:"GB",count:818},{city:"Wiltshire",province:"ENG",country:"GB",count:805},
+  {city:"Bathgate",province:"SCT",country:"GB",count:810},{city:"Horsham",province:"ENG",country:"GB",count:786},
+  {city:"Loughborough",province:"ENG",country:"GB",count:778},{city:"Hove",province:"ENG",country:"GB",count:772},
+  {city:"South Shields",province:"ENG",country:"GB",count:772},
+  // Ireland
+  {city:"Dublin",province:"D",country:"IE",count:9179},
+  {city:"Cork",province:"CO",country:"IE",count:3824},
+  {city:"Galway",province:"G",country:"IE",count:2294},
+  {city:"Limerick",province:"LK",country:"IE",count:1912},
+  {city:"Waterford",province:"WD",country:"IE",count:1530},
+  {city:"Drogheda",province:"LH",country:"IE",count:1311},
+  {city:"Dundalk",province:"LH",country:"IE",count:1147},
+  {city:"Kilkenny",province:"KK",country:"IE",count:983},
+  {city:"Ennis",province:"CE",country:"IE",count:874},
+  {city:"Tralee",province:"KY",country:"IE",count:765},
+  {city:"Sligo",province:"SO",country:"IE",count:765},
+  {city:"Letterkenny",province:"DL",country:"IE",count:874},
+  {city:"Wexford",province:"WX",country:"IE",count:765},
+  {city:"Athlone",province:"WH",country:"IE",count:655},
+  {city:"Navan",province:"MH",country:"IE",count:765},
+  {city:"Mullingar",province:"WH",country:"IE",count:601},
+  {city:"Naas",province:"KE",country:"IE",count:710},
+  {city:"Carlow",province:"CW",country:"IE",count:601},
+  {city:"Tullamore",province:"OY",country:"IE",count:492},
+  {city:"Portlaoise",province:"LS",country:"IE",count:546},
+];
+
+const REGIONS = [
+  {code:"ENG",name:"England",count:376591,color:"var(--eng)"},
+  {code:"NIR",name:"N. Ireland",count:61737,color:"var(--nir)"},
+  {code:"SCT",name:"Scotland",count:60787,color:"var(--sct)"},
+  {code:"WLS",name:"Wales",count:27547,color:"var(--wls)"},
+];
+
+const INTL = [
+  {code:"IE",name:"Ireland",count:40793,color:"var(--ie)"},
+  {code:"EU",name:"Rest of EU",count:1020,color:"#A07BD4"},
+  {code:"ROW",name:"Rest of World",count:524,color:"#D4D47B"},
+];
+
+const REGION_COLORS = {ENG:"#D4A574",SCT:"#7BA4D4",WLS:"#D47B7B",NIR:"#7BD4A5",D:"#D4C67B",CO:"#D4C67B",G:"#D4C67B",LK:"#D4C67B",WD:"#D4C67B",LH:"#D4C67B",KK:"#D4C67B",CE:"#D4C67B",KY:"#D4C67B",SO:"#D4C67B",DL:"#D4C67B",WX:"#D4C67B",WH:"#D4C67B",MH:"#D4C67B",KE:"#D4C67B",CW:"#D4C67B",OY:"#D4C67B",LS:"#D4C67B"};
+
+// ============================================================
+// MAP INIT
+// ============================================================
+const map = L.map('map', {
+  center: [54.5, -3.5],
+  zoom: 6,
+  zoomControl: true,
+  attributionControl: false,
+  minZoom: 4,
+  maxZoom: 14,
+});
+
+// Dark tiles
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+// ============================================================
+// LAYERS
+// ============================================================
+let bubbleLayer;
+
+// Prepare data with coords
+const mappedCities = CITIES.filter(c => COORDS[c.city]).map(c => ({
+  ...c,
+  lat: COORDS[c.city][0],
+  lng: COORDS[c.city][1],
+}));
+
+// Merge duplicates (London + Greater London + LONDON)
+const merged = {};
+mappedCities.forEach(c => {
+  const key = c.lat.toFixed(3) + ',' + c.lng.toFixed(3);
+  if (!merged[key]) merged[key] = {...c, mergedCount: c.count};
+  else merged[key].mergedCount += c.count;
+});
+const mergedList = Object.values(merged);
+
+// HEATMAP
+// BUBBLE MAP
+function createBubbles() {
+  const group = L.layerGroup();
+  const maxCount = Math.max(...mergedList.map(c => c.mergedCount));
+  mergedList.forEach(c => {
+    const radius = 4 + (c.mergedCount / maxCount) * 36;
+    const color = REGION_COLORS[c.province] || '#D4A574';
+    const circle = L.circleMarker([c.lat, c.lng], {
+      radius: radius,
+      fillColor: color,
+      color: color,
+      weight: 1,
+      fillOpacity: 0.35,
+      opacity: 0.6,
+    });
+    circle.bindTooltip(
+      `<div class="tt-city">${c.city}</div><div class="tt-count">${c.mergedCount.toLocaleString()}</div><div class="tt-label">customers</div>`,
+      {className: 'city-tooltip', direction: 'top', offset: [0, -radius]}
+    );
+    group.addLayer(circle);
+  });
+  return group;
+}
+
+bubbleLayer = createBubbles().addTo(map);
+
+// JOHN LEWIS STORES LAYER
+const jlLayer = L.layerGroup();
+JL_STORES.forEach(store => {
+  const icon = L.divIcon({
+    className: '',
+    html: '<div class="jl-marker">JL</div>',
+    iconSize: [28, 33],
+    iconAnchor: [14, 33],
+  });
+  const marker = L.marker([store.lat, store.lng], {icon: icon, zIndexOffset: 1000});
+  marker.bindTooltip(
+    `<div class="tt-jl-name">${store.name}</div><div class="tt-jl-brand">John Lewis & Partners</div>`,
+    {className: 'jl-tooltip', direction: 'top', offset: [0, -30]}
+  );
+  jlLayer.addLayer(marker);
+});
+jlLayer.addTo(map);
+
+document.getElementById('jlToggle').addEventListener('change', function() {
+  if (this.checked) jlLayer.addTo(map);
+  else map.removeLayer(jlLayer);
+});
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+const maxRegion = Math.max(...REGIONS.map(r => r.count));
+
+// UK Regions
+const regionList = document.getElementById('regionList');
+REGIONS.forEach(r => {
+  const pct = (r.count / maxRegion * 100).toFixed(0);
+  const el = document.createElement('div');
+  el.className = 'region-row';
+  el.innerHTML = `
+    <div class="region-dot" style="background:${r.color}"></div>
+    <div class="region-bar-wrap">
+      <div class="region-name">${r.name}</div>
+      <div class="region-bar-bg"><div class="region-bar" style="width:${pct}%;background:${r.color}"></div></div>
+    </div>
+    <div class="region-count">${(r.count/1000).toFixed(1)}k</div>
+  `;
+  regionList.appendChild(el);
+});
+
+// International
+const intlList = document.getElementById('intlList');
+const maxIntl = Math.max(...INTL.map(r => r.count));
+INTL.forEach(r => {
+  const pct = (r.count / maxIntl * 100).toFixed(0);
+  const el = document.createElement('div');
+  el.className = 'region-row';
+  el.innerHTML = `
+    <div class="region-dot" style="background:${r.color}"></div>
+    <div class="region-bar-wrap">
+      <div class="region-name">${r.name}</div>
+      <div class="region-bar-bg"><div class="region-bar" style="width:${pct}%;background:${r.color}"></div></div>
+    </div>
+    <div class="region-count">${r.count.toLocaleString()}</div>
+  `;
+  intlList.appendChild(el);
+});
+
+// Top cities
+const cityList = document.getElementById('cityList');
+// Deduplicate by coords for display
+const displayCities = [];
+const seen = new Set();
+CITIES.forEach(c => {
+  const coord = COORDS[c.city];
+  if (!coord) return;
+  const key = coord[0].toFixed(3) + ',' + coord[1].toFixed(3);
+  if (seen.has(key)) return;
+  seen.add(key);
+  const m = merged[key];
+  displayCities.push({city: c.city, province: c.province, count: m ? m.mergedCount : c.count, lat: coord[0], lng: coord[1]});
+});
+displayCities.sort((a,b) => b.count - a.count);
+
+displayCities.slice(0, 80).forEach((c, i) => {
+  const el = document.createElement('div');
+  el.className = 'city-row';
+  el.innerHTML = `
+    <span class="city-rank">${i+1}</span>
+    <span class="city-name">${c.city}</span>
+    <span class="city-count">${c.count.toLocaleString()}</span>
+  `;
+  el.addEventListener('click', () => {
+    map.flyTo([c.lat, c.lng], 10, {duration: 0.8});
+  });
+  cityList.appendChild(el);
+});
+</script>
+</body>
+</html>
